@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CS Service Survey</title>
+<title>Personal Service Survey</title>
 <style>
 *{box-sizing:border-box;font-family:Helvetica,sans-serif;}
 body{background:#f3f4f6;padding:24px;margin:0;}
@@ -15,11 +15,12 @@ h2{color:#1f2937;margin-top:0;}
 textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;min-height:120px;margin:12px 0;}
 button{padding:12px 24px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;}
 .tip{color:#6b7280;font-size:14px;}
+.success{color:#059669;margin-top:16px;}
 </style>
 </head>
 <body>
 <div class="container">
-  <h2>Customer Service Feedback Survey</h2>
+  <h2>Personal Service Feedback Survey</h2>
   <p class="tip">Ticket ID: <span id="ticketDisplay">-</span></p>
   <div class="star-wrap">
     <span class="star" data-val="1">★</span>
@@ -28,19 +29,18 @@ button{padding:12px 24px;background:#2563eb;color:#fff;border:none;border-radius
     <span class="star" data-val="4">★</span>
     <span class="star" data-val="5">★</span>
   </div>
-  <textarea id="comment" placeholder="Please leave your comments..."></textarea>
+  <textarea id="comment" placeholder="Please leave your comments and suggestions..."></textarea>
   <br>
   <button id="submitBtn">Submit Feedback</button>
-  <div id="msg" style="margin-top:16px;"></div>
+  <div id="msg" class="success"></div>
 </div>
 
 <script>
-// get ticket from url params
+// 兼容读取URL ticket参数，修复带参数打不开问题
 const urlParams = new URLSearchParams(window.location.search);
 const ticketId = urlParams.get('ticket') || "";
 document.getElementById('ticketDisplay').textContent = ticketId || "Not specified";
 
-// star logic
 let selectScore = 0;
 const stars = document.querySelectorAll('.star');
 stars.forEach(s=>{
@@ -52,14 +52,16 @@ stars.forEach(s=>{
 })
 
 document.getElementById('submitBtn').onclick = ()=>{
+  const msgBox = document.getElementById('msg');
   if(!selectScore){
-    document.getElementById('msg').innerText = "Please select star rating";
+    msgBox.innerText = "Please select star rating first";
+    msgBox.style.color = "#dc2626";
     return;
   }
   const comment = document.getElementById('comment').value.trim();
   const surveyKey = "sevSurveyList";
   const list = JSON.parse(localStorage.getItem(surveyKey)||"[]");
-  list.push({
+  list.unshift({
     id: Date.now(),
     ticketId: ticketId,
     score: selectScore,
@@ -67,7 +69,12 @@ document.getElementById('submitBtn').onclick = ()=>{
     createTime: new Date().toLocaleString()
   })
   localStorage.setItem(surveyKey, JSON.stringify(list));
-  document.getElementById('msg').innerText = "✅ Thank you! Your feedback has been submitted.";
+  msgBox.innerText = "✅ Thank you! Your feedback has been submitted successfully.";
+  msgBox.style.color = "#059669";
+  // 重置表单
+  selectScore = 0;
+  stars.forEach(x=>x.classList.remove('active'));
+  document.getElementById('comment').value = "";
 }
 </script>
 </body>
