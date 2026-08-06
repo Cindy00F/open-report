@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CS Evaluation Admin｜客服评价后台</title>
+  <style>
+    * {margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif;}
+    body{background:#f3f4f6;padding:28px 16px;}
+    .wrap{max-width:1080px;margin:0 auto;}
+    h1{font-size:22px;color:#111827;margin-bottom:6px;}
+    .sub-h{color:#6b7280;margin-bottom:20px;}
+    .bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;align-items:center;}
+    select,button{padding:8px 14px;border-radius:6px;border:none;font-size:14px;cursor:pointer;}
+    .stat-panel{background:#fff;padding:20px;border-radius:12px;box-shadow:0 1px 8px #0000000a;margin-bottom:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;}
+    .stat-item h4{font-size:14px;color:#6b7280;margin-bottom:4px;}
+    .stat-item p{font-size:24px;font-weight:bold;color:#1f2937;}
+    .eval-list{display:grid;gap:12px;}
+    .eval-card{background:#fff;padding:18px;border-radius:10px;box-shadow:0 1px 6px #00000008;}
+    .card-head{display:flex;justify-content:space-between;margin-bottom:8px;align-items:center;}
+    .score-badge{background:#fef3c7;color:#b45309;padding:2px 10px;border-radius:20px;font-size:14px;}
+    .time{font-size:13px;color:#6b7280;}
+    .cmt-box{background:#f9fafb;padding:12px;border-radius:8px;margin:10px 0;min-height:50px;white-space:pre-wrap;}
+    .btn-del{background:#ef4444;color:white;}
+    .btn-clear{background:#dc2626;color:white;}
+    .empty{text-align:center;padding:40px;color:#9ca3af;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CS Evaluation Admin</h1>
+  <div class="sub-h">客服服务评价管理后台</div>
+  <div class="bar">
+    <select id="filterScore">
+      <option value="">全部星级</option>
+      <option value="5">5星</option>
+      <option value="4">4星</option>
+      <option value="3">3星</option>
+      <option value="2">2星</option>
+      <option value="1">1星</option>
+    </select>
+    <button id="refreshBtn">刷新</button>
+    <button id="clearAll" class="btn-clear">清空全部数据</button>
+  </div>
+
+  <div class="stat-panel" id="statPanel">
+    <!--统计自动渲染-->
+  </div>
+
+  <div class="eval-list" id="listWrap"></div>
+</div>
+
+<script>
+  const storageKey = 'csEvalList';
+  const filterEl = document.getElementById('filterScore');
+  const refreshBtn = document.getElementById('refreshBtn');
+  const clearAllBtn = document.getElementById('clearAll');
+  const statPanel = document.getElementById('statPanel');
+  const listWrap = document.getElementById('listWrap');
+
+  function getRawData(){
+    return JSON.parse(localStorage.getItem(storageKey)) || [];
+  }
+
+  function render(){
+    const all = getRawData();
+    let data = [...all];
+    const filterVal = filterEl.value;
+    if(filterVal){
+      data = data.filter(d=>d.score===Number(filterVal));
+    }
+
+    //统计
+    const total = all.length;
+    const avg = total>0 ? (all.reduce((s,i)=>s+i.score,0)/total).toFixed(2) : '0.00';
+    const star5 = all.filter(i=>i.score===5).length;
+    const star4 = all.filter(i=>i.score===4).length;
+
+    statPanel.innerHTML = `
+      <div class="stat-item"><h4>总评价数</h4><p>${total}</p></div>
+      <div class="stat-item"><h4>平均得分</h4><p>${avg}</p></div>
+      <div class="stat-item"><h4>5星</h4><p>${star5}</p></div>
+      <div class="stat-item"><h4>4星</h4><p>${star4}</p></div>
+    `;
+
+    if(data.length===0){
+      listWrap.innerHTML = `<div class="empty">暂无评价数据</div>`;
+      return;
+    }
+
+    listWrap.innerHTML = data.map(item=>`
+      <div class="eval-card">
+        <div class="card-head">
+          <span class="score-badge">${item.score} ★</span>
+          <span class="time">${item.createTime}</span>
+          <button class="btn-del" data-id="${item.id}">删除</button>
+        </div>
+        <div class="cmt-box">${item.comment || '无文字评价'}</div>
+      </div>
+    `).join('');
+
+    //绑定删除
+    document.querySelectorAll('.btn-del').forEach(btn=>{
+      btn.onclick = function(){
+        const delId = Number(this.dataset.id);
+        let arr = getRawData().filter(x=>x.id!==delId);
+        localStorage.setItem(storageKey,JSON.stringify(arr));
+        render();
+      }
+    })
+  }
+
+  filterEl.addEventListener('change',render);
+  refreshBtn.addEventListener('click',render);
+  clearAllBtn.addEventListener('click',()=>{
+    if(confirm('确定清空全部评价？不可恢复！')){
+      localStorage.removeItem(storageKey);
+      render();
+    }
+  })
+
+  render();
+</script>
+</body>
+</html>
