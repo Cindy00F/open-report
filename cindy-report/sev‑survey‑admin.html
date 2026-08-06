@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Survey Admin</title>
+<title>Personal Survey Admin Panel</title>
 <style>
 *{box-sizing:border-box;font-family:system-ui,sans-serif;}
 body{background:#f3f4f6;padding:28px 16px;margin:0;}
@@ -19,16 +19,18 @@ button{padding:8px 14px;border:none;border-radius:6px;font-size:14px;cursor:poin
 .btn-blue{background:#2563eb;color:#fff;}
 .btn-red{background:#dc2626;color:#fff;}
 .btn-green{background:#059669;color:#fff;}
+.btn-yellow{background:#d97706;color:#fff;}
 .customer-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;}
 .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px;margin-bottom:20px;}
 .stat-card{background:#fff;padding:20px;border-radius:12px;}
 .survey-card{background:#fff;padding:16px;border-radius:10px;margin-bottom:12px;box-shadow:0 1px 4px #0000000a;}
+.code-box{width:100%;min-height:180px;margin-top:12px;padding:12px;background:#111827;color:#a5f3fc;border-radius:8px;font-size:12px;white-space:pre-wrap;overflow:auto;}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Survey Admin Panel</h1>
-  <div class="sub">Customer list · Trigger Outlook mail · View feedback with ticket ID</div>
+  <h1>Personal Survey Admin Panel</h1>
+  <div class="sub">Customer list · Copy styled HTML mail · View feedback with ticket ID</div>
 
   <div class="two-col">
     <div class="panel">
@@ -37,50 +39,52 @@ button{padding:8px 14px;border:none;border-radius:6px;font-size:14px;cursor:poin
         <input id="custName" placeholder="Customer Name">
         <input id="custEmail" placeholder="Email">
         <input id="custTicket" placeholder="Ticket ID">
-        <button class="btn-blue" id="addCustBtn">Add</button>
+        <button class="btn-blue" id="addCustBtn">Add Customer</button>
       </div>
       <div id="custWrap"></div>
       <div class="input-row" style="margin-top:14px;">
-        <button class="btn-green" id="openOutlookBtn">Open Outlook Send Mail (Selected)</button>
+        <button class="btn-yellow" id="copyHtmlMailBtn">Copy Styled HTML Email (With Button)</button>
+        <button class="btn-green" id="openOutlookBtn">Open Outlook (Plain Text Backup)</button>
         <button class="btn-red" id="clearCustBtn">Clear All Customer</button>
       </div>
+      <textarea class="code-box" id="htmlOutput" readonly placeholder="Copied HTML will display here"></textarea>
     </div>
 
     <div class="panel">
-      <h3>Instruction</h3>
+      <h3>Operation Instructions</h3>
       <ul style="padding-left:20px;margin:0;color:#374151;">
-        <li>Add customer with Name / Email / Ticket ID</li>
-        <li>Check target customers</li>
-        <li>Click <b>Open Outlook Send Mail</b> → local Outlook will pop‑up</li>
-        <li>Survey link auto‑inject ticketId: <code>sev‑survey.html?ticket=XXX</code></li>
-        <li>Inside Outlook: just click Send button manually</li>
+        <li>Add customer info: Name / Email / Ticket ID</li>
+        <li>Check the customers you need to send survey</li>
+        <li>Click <b>Copy Styled HTML Email</b> → full formatted mail with blue button copied</li>
+        <li>Open Outlook new mail, paste HTML directly into mail body</li>
+        <li>Each customer gets unique link: sev-survey.html?ticket=XXX</li>
       </ul>
-      <p style="margin-top:12px;color:#999;font-size:13px;">Note: Require local Outlook installed. Can NOT send mail fully automatic by browser.</p>
+      <p style="margin-top:12px;color:#999;font-size:13px;">Note: Mailto cannot render HTML buttons, copy HTML template is the only way to get styled mail.</p>
     </div>
   </div>
 
   <h3>Survey Feedback List</h3>
   <div class="stat-row">
     <div class="stat-card">
-      <div style="font-size:14px;color:#6b7280;">Total</div>
+      <div style="font-size:14px;color:#6b7280;">Total Feedback</div>
       <div id="statTotal" style="font-size:24px;font-weight:bold;">0</div>
     </div>
     <div class="stat-card">
-      <div style="font-size:14px;color:#6b7280;">Avg Score</div>
+      <div style="font-size:14px;color:#6b7280;">Average Score</div>
       <div id="statAvg" style="font-size:24px;font-weight:bold;">0</div>
     </div>
     <div class="stat-card">
-      <div style="font-size:14px;color:#6b7280;">5 Star</div>
+      <div style="font-size:14px;color:#6b7280;">5 Star Count</div>
       <div id="stat5" style="font-size:24px;font-weight:bold;">0</div>
     </div>
     <div class="stat-card">
-      <div style="font-size:14px;color:#6b7280;">4 Star</div>
+      <div style="font-size:14px;color:#6b7280;">4 Star Count</div>
       <div id="stat4" style="font-size:24px;font-weight:bold;">0</div>
     </div>
   </div>
   <div style="margin-bottom:12px;">
-    <button id="refreshSurveyBtn">Refresh Feedback</button>
-    <button class="btn-red" id="clearSurveyBtn">Clear All Feedback</button>
+    <button id="refreshSurveyBtn">Refresh Feedback Data</button>
+    <button class="btn-red" id="clearSurveyBtn">Clear All Feedback Records</button>
   </div>
   <div id="surveyWrap"></div>
 </div>
@@ -88,9 +92,62 @@ button{padding:8px 14px;border:none;border-radius:6px;font-size:14px;cursor:poin
 <script>
 const custStorageKey = "sevSurveyCustomer";
 const surveyStorageKey = "sevSurveyList";
+// 修复链接文件名，统一短横，解决带?ticket打不开
 const baseSurveyUrl = "https://cindy00f.github.io/open-report/cindy-report/sev-survey.html";
 
-// Customer
+// 美化邮件模板内容（无Philips，带按钮）
+const mailTemplateHtml = `<!doctype html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Personal Service Survey Invite</title>
+<style media="all" type="text/css">
+@media all {
+  .btn-primary table td:hover {background-color:#0658ce !important;}
+  .btn-primary a:hover {background-color:#0658ce !important;border-color:#0658ce !important;}
+}
+@media only screen and (max-width: 640px) {
+  .main p,.main td,.main span {font-size:16px !important;}
+  .wrapper {padding:8px !important;}
+  .container {width:100% !important;padding-top:8px !important;}
+}
+</style>
+</head>
+<body style="font-family: Helvetica, sans-serif;background-color:#f4f5f6;margin:0;padding:0;">
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#f4f5f6">
+  <tr>
+    <td></td>
+    <td class="container" width="600" style="max-width:600px;margin:0 auto;">
+      <div class="content">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" bgcolor="#ffffff" style="border-radius:16px;border:1px solid #eaebed;">
+          <tr>
+            <td class="wrapper" style="padding:24px;">
+              <p>Dear Customer,</p>
+              <p>Thank you for your recent service experience. Your feedback is very important to help me improve service quality.</p>
+              <p>Please take about 1 minute to complete this short personal survey.</p>
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td bgcolor="#0867ec" style="border-radius:4px;padding:12px 24px;text-align:center;">
+                    <a href="{{SURVEY_LINK}}" target="_blank" style="color:#ffffff;font-weight:bold;text-decoration:none;font-size:16px;">Complete Survey</a>
+                  </td>
+                </tr>
+              </table>
+              <p>Every opinion will be carefully reviewed.</p>
+              <p>Best regards,<br>Personal Service Team</p>
+            </td>
+          </tr>
+        </table>
+        <div style="text-align:center;padding-top:20px;color:#9a9ea6;font-size:14px;">Personal Service Survey</div>
+      </div>
+    </td>
+    <td></td>
+  </tr>
+</table>
+</body>
+</html>`;
+
+// 客户列表逻辑
 function getCustomerList(){
   return JSON.parse(localStorage.getItem(custStorageKey)||"[]");
 }
@@ -105,7 +162,7 @@ function renderCustomer(){
       <span>${item.name}</span> |
       <span>${item.email}</span> |
       <span>Ticket:${item.ticketId??""}</span>
-      <button data-idx="${idx}" class="btn-red del-cust">X</button>
+      <button data-idx="${idx}" class="btn-red del-cust">Delete</button>
     </div>`).join("");
   document.querySelectorAll(".del-cust").forEach(btn=>{
     btn.onclick = ()=>{
@@ -122,7 +179,7 @@ document.getElementById("addCustBtn").onclick = ()=>{
   const name = document.getElementById("custName").value.trim();
   const email = document.getElementById("custEmail").value.trim();
   const tid = document.getElementById("custTicket").value.trim();
-  if(!name||!email){alert("Name & Email required");return;}
+  if(!name||!email){alert("Name & Email cannot be empty");return;}
   const list = getCustomerList();
   list.push({name,email,ticketId:tid});
   saveCustomerList(list);
@@ -133,13 +190,31 @@ document.getElementById("addCustBtn").onclick = ()=>{
 }
 
 document.getElementById("clearCustBtn").onclick = ()=>{
-  if(confirm("Clear all customer list?")){
+  if(confirm("Clear all customer list? Cannot recover.")){
     localStorage.removeItem(custStorageKey);
     renderCustomer();
   }
 }
 
-// Open outlook via mailto
+// 复制带按钮完整HTML邮件（解决无样式纯文本问题）
+document.getElementById("copyHtmlMailBtn").onclick = ()=>{
+  const checks = Array.from(document.querySelectorAll(".cust-check:checked"));
+  if(checks.length === 0){alert("Please select at least one customer");return;}
+  const custList = getCustomerList();
+  // 取第一个选中客户的ticket生成链接（多客户共用同模板，链接可手动替换）
+  const targetIdx = Number(checks[0].dataset.idx);
+  const targetCust = custList[targetIdx];
+  const realLink = baseSurveyUrl + "?ticket=" + encodeURIComponent(targetCust.ticketId||"");
+  const finalHtml = mailTemplateHtml.replace("{{SURVEY_LINK}}", realLink);
+  // 填入文本框并复制
+  const outputBox = document.getElementById("htmlOutput");
+  outputBox.value = finalHtml;
+  outputBox.select();
+  document.execCommand("copy");
+  alert("Styled HTML email copied! Open Outlook new mail and paste to get blue button.");
+}
+
+// 备用：唤起Outlook纯文本邮件
 document.getElementById("openOutlookBtn").onclick = ()=>{
   const checks = Array.from(document.querySelectorAll(".cust-check:checked"));
   if(checks.length === 0){alert("Please select at least one customer");return;}
@@ -151,24 +226,20 @@ document.getElementById("openOutlookBtn").onclick = ()=>{
     toList.push(c.email);
   })
   const to = toList.join(";");
-  const subject = "Please complete our customer‑service survey";
-
-  // mailto body 只支持有限html，这里放入完整可跳转链接
-  let bodyText = "Dear Customer,%0D%0A%0D%0AThank you for your recent customer‑service support experience.%0D%0APlease open the link below to submit feedback:%0D%0A";
+  const subject = "Please complete my personal service survey";
+  let bodyText = "Dear Customer,%0D%0A%0D%0AThank you for your service experience, please open the link below to submit feedback:%0D%0A";
   checks.forEach(cb=>{
     const idx = Number(cb.dataset.idx);
     const c = custList[idx];
     const link = baseSurveyUrl + "?ticket=" + encodeURIComponent(c.ticketId||"");
     bodyText += `%0D%0A👉 ${link}`;
   })
-  bodyText += "%0D%0A%0D%0ABest regards,%0D%0ACustomer Service Team";
-
-  // trigger outlook
+  bodyText += "%0D%0A%0D%0ABest regards,%0D%0APersonal Service Team";
   const mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${bodyText}`;
   window.location.href = mailtoUrl;
 }
 
-// Survey render
+// 反馈数据渲染
 function getSurveyList(){
   return JSON.parse(localStorage.getItem(surveyStorageKey)||"[]");
 }
@@ -189,25 +260,24 @@ function renderSurvey(){
   document.getElementById("stat4").innerText = cnt4;
 
   if(list.length===0){
-    document.getElementById("surveyWrap").innerHTML = "<p>No feedback yet.</p>";
+    document.getElementById("surveyWrap").innerHTML = "<p>No feedback records yet.</p>";
     return;
   }
   document.getElementById("surveyWrap").innerHTML = list.map(item=>`
     <div class="survey-card">
-      <div>⭐ Score: ${item.score} | Ticket: ${item.ticketId||"N/A"} | ${item.createTime}</div>
-      <div style="margin-top:8px;">Comment: ${item.comment||"(empty)"}</div>
+      <div>⭐ Score: ${item.score} | Ticket ID: ${item.ticketId||"N/A"} | Submit Time: ${item.createTime}</div>
+      <div style="margin-top:8px;">Customer Comment: ${item.comment||"(No comment filled)"}</div>
     </div>`).join("");
 }
 
 document.getElementById("refreshSurveyBtn").onclick = renderSurvey;
 document.getElementById("clearSurveyBtn").onclick = ()=>{
-  if(confirm("Clear all survey feedback?")){
+  if(confirm("Clear all survey feedback records? Cannot recover.")){
     localStorage.removeItem(surveyStorageKey);
     renderSurvey();
   }
 }
 
-// init
 renderCustomer();
 renderSurvey();
 </script>
