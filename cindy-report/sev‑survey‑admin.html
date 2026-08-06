@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Personal Survey Admin Panel</title>
-<!-- SheetJS for Excel export -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;font-family:system-ui,sans-serif;}
@@ -58,7 +57,7 @@ button{padding:8px 14px;border:none;border-radius:6px;font-size:14px;cursor:poin
         <li>Add customer info: Name / Email / Ticket ID</li>
         <li>Check the customers you need to send survey</li>
         <li>Click <b>Copy Styled HTML Email</b> → full formatted mail with blue button copied</li>
-        <li>Open Outlook new mail, paste HTML directly into mail body</li>
+        <li>Save template as html file, open in browser, Ctrl+A copy page content then paste into Outlook</li>
         <li>Each customer gets unique link: sev‑survey.html?ticket=XXX</li>
         <li>Download Excel: export all survey feedback records to xlsx file locally</li>
       </ul>
@@ -209,7 +208,7 @@ document.getElementById("copyHtmlMailBtn").onclick = ()=>{
   outputBox.value = finalHtml;
   outputBox.select();
   document.execCommand("copy");
-  alert("Styled HTML email copied! Open Outlook new mail and paste to get blue button.");
+  alert("Styled HTML email copied! Save as .html file, open in browser, Ctrl+A copy page content for Outlook.");
 }
 
 document.getElementById("openOutlookBtn").onclick = ()=>{
@@ -266,14 +265,12 @@ function renderSurvey(){
     </div>`).join("");
 }
 
-// ========== Export Excel ==========
 document.getElementById("exportExcelBtn").onclick = function(){
   const list = getSurveyList();
   if(!list || list.length ===0){
     alert("No survey data to export.");
     return;
   }
-  // map to excel columns
   const exportData = list.map(r=>{
     return {
       "ID": r.id,
